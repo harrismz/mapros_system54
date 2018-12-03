@@ -2,114 +2,135 @@
   <div>
     <div class="container">
         <div class="row">
-
-            <div v-if="showAlert" class="col-md-8 col-md-offset-2">
-                <alert  
-                    @showDetailError='showDetailError'
-                    @toggleAlert='toggleAlert'
-                    :message='error'
-                    :isDanger='hasError'
-                ></alert>
-            </div>
-
             <div class="col-md-8 col-md-offset-2">
                 <div class="panel panel-default">
-                    <div class="panel-heading custom-color">
-                        <div class="row">
-                           <div class="col-md-6 col-sm-6 col-xs-7">
-                            LINE : <strong> {{ info.line }} </strong>
-                           </div>
-                           <div class="col-md-6 col-sm-6 col-xs-5 text-right pull-right float-right">
-                               TYPE : {{ info.type }}
-                           </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 col-sm-6 col-xs-7">
-                                PROCESS: <strong> {{info.process}} </strong>
-                            </div>
-                            <div class="col-md-6 col-sm-6 col-xs-5 text-right pull-right float-right">
-                               STEP ID : {{ info.lineprocess_id }}
-                           </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6 col-sm-6 col-xs-12">
-                                model: <strong> {{form.modelname}} </strong>
-                            </div>
-                        </div>
-                    </div>
+                    
                     <div class="panel-body">
                         <form class="form-horizontal" role="form" @submit.prevent='onSubmit' >
+                            <div class="form-group text-center">
+                                <h3><strong>PLEASE SCAN DATA</strong></h3>
+                            </div>
+
                             <div class="form-group">
                                 <label for="nik" class="col-md-4 control-label">NIK</label>
                                 <div class="col-md-6">
                                     <div class="button-group">
-                                        <input id="nik" type="search" maxlength="10" class="form-control" name="nik" v-model='form.nik' required autofocus @keyup.13.prevent='boardOnFocus'>
+                                        <input placeholder="Scan NIK disini" id="nik" type="search" maxlength="10" class="form-control" name="nik" v-model='form.nik' required autofocus @keyup='nikOnKeyup' @keyup.13.prevent='boardOnFocus'>
                                         <!-- <span id="searchclear" class="fa fa-window-close"></span> -->
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="form-group" hidden="true">
-                                <label for="name" class="col-md-4 control-label">IP Address</label>
+                            <div class="form-group" v-if='config.showCritical' v-for="(critical, index ) in form.critical_parts" >
+                                <label for="critical_parts" class="col-md-4 control-label">Critical Part</label>
+                                <div class="col-md-6" >
+                                    <div class="input-group">
+                                        <input :id="'critical_parts_' + index" :ref="'critical_parts_' + index" placeholder="Scan Critical Part disini" class="form-control" name="critical_parts" v-model='form.critical_parts[index]' required autofocus>        
 
-                                <div class="col-md-6">
-                                    <input v-model='form.ip' id="ip_address" type="text" class="form-control" name="ip_address" required autofocus>
+                                        <span class="input-group-btn">
+                                            <button type="button" class="btn btn-success" @click.prevent='addCritical' ><span class="fa fa-plus"></span> </button>
+                                            <button type="button" class="btn btn-danger" @click.prevent='minusCritical(index)' ><span class="fa fa-minus"></span> </button>
+                                        </span>
+                                    </div>
                                 </div>
-                            </div>
+                            </div>                            
 
                             <div class="form-group">
                                 <label class="col-md-4 control-label">{{ label.id }}</label>
 
                                 <div class="col-md-6">
-                                    <input id="board_id" ref='board_id' v-model="form.board_id" type="board_id" class="form-control" name="board_id"  required>
+                                    <input :placeholder="'Scan '+ label.id" id="board_id" ref='board_id' v-model="form.board_id" type="board_id" @input='filterBoard' class="form-control" name="board_id"  required>
+                                </div>
+                            </div>
+
+                            <div class="form-group" v-if='isJoin'>
+                                <label class="col-md-offset-4 col-md-6"> Proses Join Active : <toggle-button v-model="isJoin" :color="'#2ab27b'" :labels="true" /></label>
+
+                                <label class="col-md-offset-4 col-md-6"> Join Ke {{ computedJumlahJoin }} dari {{config.jumlahJoin}}</label>
+                            </div>
+
+                            <div class="form-group" v-if="config.isAutolinezero" >
+                                <label class="col-md-4 control-label">{{ label.serialAutolinezero }}</label>
+
+                                <div class="col-md-6">
+                                    <input  id="serialAutolinezero" ref='serialAutolinezero' v-model="serialAutolinezero" type="serialAutolinezero" class="form-control" name="serialAutolinezero"  required>
                                 </div>
                             </div>
 
                             <div v-if="config.showSolder" class="form-group">
                                 <div class="col-md-6 col-md-offset-4">
                                     <!-- <input type="checkbox" id="checkbox" v-model="form.is_solder"> -->
-                                    <toggle-button v-model="form.is_solder" :color="'#2ab27b'" :labels="true"/>
+                                    <toggle-button v-model="form.is_solder" :color="'#2ab27b'" :sync='true' :labels="true"/>
                                     <label for="checkbox"> SOLDER </label>
                                 </div>
                             </div>  
 
-                            <div class="form-group">
+                            <div v-if="config.showNgoption" class="form-group">
+                                <div :class="{'col-md-2':isNG, 'col-md-6':!isNG, 'col-md-offset-4': true }">
+                                    <toggle-button v-model="isNG" :color="'#960a0a'" :sync='true' :labels="true"/>
+                                    <label for="checkbox"> NG </label>
+                                </div>
+                                <div class="col-md-4" v-if='isNG'>
+                                    <v-select
+                                        placeholder='ketik untuk kode symptom / kategori symptom'
+                                        multiple 
+                                        v-model='form.symptom'
+                                        :maxHeight='"200px"' 
+                                        label="category" 
+                                        :options="options"
+                                        index="code"
+                                        @search="onSearch" >
+                                        <template slot="option" slot-scope="option">
+                                            {{ option.code }} - {{ option.category }}
+                                        </template>
+                                    </v-select>
+                                    <!-- <input type="text" class="form-control" name=""> -->
+                                </div>
+                            </div>
+
+                            <div class="form-group" v-if='isLoading' >
                                 <div class="col-md-3 col-md-offset-4">
-                                    <loading v-if='isLoading' />
+                                    <loading />
                                 </div>
                             </div>
 
                             <div class="form-group">
                                 <div class="col-md-12 col-xs-12">
-                                    <div class="well">
-                                        <div class="custom-color text-center">
+                                    <div class="well no-bottom-margin" :style="styles" >
+                                        <div class="custom-color">
                                             <div class="row">
-                                               <div class="col-md-12 col-sm-12 col-xs-12">
+                                               <div class="col-md-6 col-sm-6 col-xs-7">
                                                 LINE : <strong> {{ info.line }} </strong>
+                                               </div>
+                                               <div class="col-md-6 col-sm-6 col-xs-5 text-right pull-right float-right">
+                                                   TYPE : {{ info.type }}
                                                </div>
                                             </div>
                                             <div class="row">
-                                                <div class="col-md-12 col-sm-12 col-xs-12">
+                                                <div class="col-md-6 col-sm-6 col-xs-7">
                                                     PROCESS: <strong> {{info.process}} </strong>
                                                 </div>
+                                                <div class="col-md-6 col-sm-6 col-xs-5 text-right pull-right float-right">
+                                                   STEP ID : {{ info.lineprocess_id }}
+                                               </div>
                                             </div>
+
                                             <div class="row">
-                                                <div class="col-md-12 col-sm-12 col-xs-12">
-                                                    model: <strong> {{form.modelname}} </strong>
+                                                <div class="col-md-6 col-sm-6 col-xs-12">
+                                                    MODEL : <strong> {{form.modelname}} </strong>
                                                 </div>
                                             </div>
                                             <hr class="black">
                                         </div>
                                         <div class="text-center">
-                                            information status: <br>
-                                            <div :class='{"text-danger": hasError, "text-success": !hasError }'>
+                                            Information Status: <br>
+                                            <!-- <div :class='{"text-danger": hasError, "text-success": !hasError }'> -->
                                                 <strong> {{error}} </strong>
-                                            </div>
+                                            <!-- </div> -->
+                                            <!-- :class='{"text-danger": hasError, "text-success": !hasError }' -->
+                                            <H2  ><strong>{{ (hasError) ? 'NG':'OK' }}</strong></H2>
 
-                                            <H2 :class='{"text-danger": hasError, "text-success": !hasError }' ><strong>{{ (hasError) ? 'NG':'OK' }}</strong></H2>
-
-                                            <a class="text-danger" @click.prevent="showDetailError" >detail >></a>
+                                            <a :style='styles' @click.prevent="showDetailError" >See Details >></a>
                                         </div>
                                     </div>
                                 </div>
@@ -117,14 +138,18 @@
                             
                             <div class="form-group">
                                 <div class="col-md-6 col-md-offset-4">
-                                    <button type="submit" class="btn btn-success" >
+                                    <button 
+                                        v-if='!config.isShowDeleteButton' 
+                                        type="submit" 
+                                        :class="{btn:true, 'btn-success': !isNG, 'btn-danger':isNG }" >
                                         Submit <i class="fa fa-check float-right"></i>
                                     </button>
 
-                                    <button v-if='config.isShowDeleteButton' @click.prevent='deleteOnClick'  type="button" class="btn btn-danger">
-                                        Delete
+                                    <button v-if='config.isShowDeleteButton' @click.prevent='deleteOnClick'  type="submit" class="btn btn-danger">
+                                        Delete <i class="fa fa-trash float-right"></i>
                                     </button>
 
+                                    <button v-if="(config.isSendAjax || config.isGenerateFile) && responseData.message.includes('IN / OK') " @click.prevent='resendData' class="btn btn-warning">Resend Data <i class="fa fa-arrow-right"></i> </button>
                                 </div>
                             </div>
 
@@ -165,10 +190,28 @@
     import alert from './Alert';
     import join from './Join';
     import ToggleButton from 'vue-js-toggle-button/src/Button';
+    import vSelect from 'vue-select';
+    import _ from 'lodash';
+    
     export default {
         data: () => {
             return {
                 form : {
+                    ip: '',
+                    board_id: '',
+                    nik: '',
+                    modelname:'',
+                    is_solder:false,
+                    judge : 'OK', //default nya OK
+                    symptom: [], //default value for symptom is empty array;
+                    // critical_parts:[''], //default value for critical_parts empty array
+                },
+
+                isNG : false,
+                options : [], 
+                isJoin : false,
+
+                oldForm : {
                     ip: '',
                     board_id: '',
                     nik: '',
@@ -197,24 +240,55 @@
                     lineprocess_id : '',
                 },
 
+                state : 'in',
+
                 isLoading:false,
                 showModal: false,
                 showConfirm:false,
 
                 label : {
-                    id : 'Board ID'
+                    id : 'Board ID',
+                    serialAutolinezero : 'Serial Set'
                 },
+
+                jumlahJoin: 0, //current jumlah join
+
+                styles : {}, //dipakai di warna well
 
                 // it's basically will be override by getConfig method
                 config : {
                     modelname: '',
                     ip       : '',
+                    
+                    // showCritical : false, //it cannot have default value, otherwise, wathc will not called; let it be;
+                    
                     showSolder: true,
                     isGenerateFile : false,
+                    generatedFileName : 'something.txt',
                     isSendAjax : false,
                     isShowDeleteButton : false,
+                    isAutolinezero : false,
                     uri : '',
+                    showNgoption : false,
+                    toggleNgMode : '',
+                    jumlahJoin:1, //default value of jumlah join
+                    esdUri: '',
+                    checkEsd:'',
                 },
+
+                serialAutolinezero:'', //default value of serial
+
+                responseData: {
+                    success: true,
+                    message: '',
+                },
+
+                oldResponseData: {
+                    success: true,
+                    message: '',
+                },
+
+                downloadContent : null,
 
                 modal: {
                     header: 'Header',
@@ -223,18 +297,89 @@
             }
         },
 
+        watch:{
+            clonedForm: function(newVal, oldVal){
+              // console.log({newVal, oldVal})
+              this.oldForm = oldVal;
+            }, 
+
+            clonedResponseData(newVal, oldVal ){
+                this.oldResponseData = oldVal;
+            },
+
+            isJoin(newVal, oldVal){
+                this.isJoinOnChange();
+            },
+
+            isNG(isNG, oldVal){
+                var judge;
+                if(isNG){
+                    judge = 'NG';
+                    this.form.symptom = [{code:99, category: 'OTHER'}]; //DEFAULT VALUE
+                    this.fetchSymptomCode();
+                }else{
+                    judge = 'OK';
+                    delete this.form.symptom;
+                }
+                this.form.judge = judge;
+            },
+
+            computedShowCritical(newVal, oldVal){
+                if (newVal == true) {
+                    this.form.critical_parts = [''];
+                }else{
+                    delete this.form.critical_parts;
+                }
+                // console.log('showCritical watch called', this.form, newVal )
+            },            
+        },
+
+        computed:{
+            clonedForm: function(){
+               return JSON.parse(JSON.stringify( this.form ))
+            },
+
+            clonedResponseData(){
+                return JSON.parse(JSON.stringify( this.responseData ))
+            },
+
+            computedJumlahJoin(){
+                return this.jumlahJoin + 1;
+            },
+
+            computedShowCritical(){
+                // console.log('showCritical computed called', this.config.showCritical )
+                return this.config.showCritical 
+            }
+        },
+
         mounted(){
+            // setting event on root 
+            let self = this;
+            this.$root.$once('GeneratedFile', ( dummy='MAMST', enter='\r\n', serial = '#NA') => {
+                // your code goes here
+                // let dummy = 'dummy_id_goes here';
+                // let serial = 'serial goes here ';
+                // let enter = '\n';
+                let data = dummy + enter + serial ;
+                let filename  = 'example.txt';
+                self.download(data, filename );
+            });
             // console.log('mounted')
             this.getConfig();
             this.getInfo();
         },
 
         components: {
-            modal, loading, confirm, alert, join, ToggleButton,
+            modal, loading, confirm, alert, join, ToggleButton, vSelect
         },
 
         methods : {
             onSubmit(){
+
+                if( this.toggleMode() == 'break' ){
+                    return;
+                };
 
                 let data = this.form;
                 // console.log(data);
@@ -265,15 +410,22 @@
                         }
 
                         let data = error.response.data;
+                        this.responseData = error.response.data;
                         console.log(data)
                         let message = data.message;
                         
                         if(message == 'view'){
+                            let pesan = this.form.board_id + ' IN / OK';
+                            this.hasError = false;
+                            this.error = pesan;
+                            this.detailError = pesan;
+                            this.changesColor('yellow');
                             this.returnJoin(data.errors);
                             return;
                         }
 
                         if(message == 'confirmation-view'){
+
                             this.returnViewConfirmation(data);
                             return;
                         }
@@ -282,9 +434,157 @@
                     })
             },
 
+            nikOnKeyup(e){
+                if(this.config.checkEsd && ( this.form.nik.length >= 5 ) ){
+                   this.checkEsd(this)
+                }
+            },
+
+            checkEsd : _.debounce(( self ) => {
+              const url = self.config.esdUri;
+              const nik = self.form.nik;
+
+              axios.get(url, {
+                params : {
+                    nik : nik
+                }
+              })
+              .then((res) => {
+                console.log('success', res)  
+              }).catch((error) => {
+                let data = error.response.data;
+                console.log(data)
+                // self.clearForm();
+                self.form.nik = '';
+
+                self.toggleModal('WARNING', data.message );
+
+              });
+
+            }, 350),
+
+            addCritical(){
+                // console.log('addCritical triggered')
+                this.form.critical_parts.push('');
+            },
+
+            minusCritical(index){
+                // console.log('minusCritical triggered')
+                if (this.form.critical_parts.length != 1) {
+                    this.form.critical_parts.splice(index, 1);
+                }else{
+                    this.form.critical_parts = ['']; //make textfield empty
+                    console.log( this.$refs )
+                    var el = this.$refs['critical_parts_'+index][0];
+                    if (el) {
+                        el.focus()
+                    }
+                }
+            },
+
+            changesCriticalCounter($i){
+                this.config.criticalCounter = this.config.criticalCounter + $i;
+            },
+
+            toggleMode(){
+                if(this.config.showSolder){
+                    if(this.form.board_id == this.config.toggleSolderMode ){
+                        this.form.is_solder = !this.form.is_solder;
+                        this.clearForm();
+                        return 'break';
+                    }
+                }
+
+                if(this.config.showNgoption){
+                    if(this.form.board_id == this.config.toggleNgMode ){
+                        this.isNG = !this.isNG;
+                        this.clearForm();
+                        return 'break';
+                    }
+                }    
+            },
+
+            filterBoard(evt){
+                let board_id = this.form.board_id;
+                if (board_id.includes('&')) {
+                    this.form.board_id = '';
+                    let el = document.querySelector( ':focus' );
+                    if( el ) el.blur();
+                    this.toggleModal('Information', 'HASIL SCAN MENGANDUNG "&" TOLONG ULANGI!')
+                }
+            },
+
+            onSearch(search, loading ){
+                loading(true);
+                this.search(loading, search, this );
+            },
+
+            search: _.debounce((loading, search, vm) => {
+              const url = 'api/symptoms/all';
+
+              axios.get(url, {
+                params : {
+                    q : search
+                }
+              })
+              .then(res => {
+                // res.json().then(json => (vm.options = json.items));
+                let response = res.data;
+                let data = response.data;
+                vm.options = data;
+                
+                console.log(data)
+
+                loading(false);
+              });
+
+            }, 350),
+
+            fetchSymptomCode(){
+                //fetch data for selectbox;
+                const url = 'api/symptoms/all';
+
+              axios.get(url)
+              .then(res => {
+                // res.json().then(json => (vm.options = json.items));
+                let response = res.data;
+                let data = response.data;
+                this.options = data;
+              }).catch(res => {
+                console.log(res , 'error fetch data!')
+              });
+            },
+
+            changesColor(color){
+                let yellow = {
+                    backgroundColor : '#e5ff12',
+                    'border-color'    : '#888080',
+                }
+
+                let green = {
+                    backgroundColor : '#11b90e',
+                    color           : 'white',
+                    'border-color'    : '##819289'
+                }
+
+                let red  = {
+                    color : '#d2c6c6',
+                    backgroundColor : '#8e0d0d',
+                    'border-color' : '#888080'
+                }
+
+                if(color == 'red'){
+                    this.styles = red;
+                }else if (color == 'yellow'){
+                    this.styles = yellow;
+                }else{
+                    this.styles = green;
+                }
+            },
+
             download(data, filename, type) {
                 var file = new Blob([data], {type: type});
-                console.log('download');
+                console.log(data ,'download');
                 if (window.navigator.msSaveOrOpenBlob) // IE10+
                     window.navigator.msSaveOrOpenBlob(file, filename);
                 else { // Others
@@ -302,52 +602,115 @@
             },
 
             boardOnFocus(){
-                console.log(this.$event)
-                return
 
-                this.$event.target.nextElementSibling.focus()
+                if(this.config.isGenerateFile && this.config.isAutolinezero && this.serialAutolinezero == '' ){
+                    let serialAutolinezero = document.getElementById('serialAutolinezero');
+                    serialAutolinezero.focus();
+                }
+
+                if(this.form.board_id == ''){
+                    let boardInput = document.getElementById('board_id');
+                    if(boardInput){
+                        boardInput.focus()
+                    }
+                }
+
+                if(this.form.nik == ''){
+                    let nikInput = document.getElementById('nik');
+                    if(nikInput){
+                        nikInput.focus();
+                    }
+                }
+                // console.log('board on focus triggered')
             },
 
             handleError(message, detailError = '' ){
                 this.error = message;
                 this.detailError = detailError;
                 this.hasError = true;
+                this.changesColor('red');
                 this.form.board_id='';
-                // this.toggleAlert();
-                // this.showAlert = true;
-                // this.$refs.board_id.$el.focus();
             },
 
             handleSucces(response){
                 // set error to default value to show alert-success in alert
-                // console.log('handleSucces', response )
+                console.log('handleSucces', response )
                 let message = response.data.message;
+                this.responseData = response.data;
                 this.hasError = false;
                 this.error = message;
+                this.detailError = this.responseData; //message;
 
-                if(this.config.isGenerateFile){
-                    if (response.data.node.status != 'IN') return; //kalau dia bkn in, gausah download;
-                    this.download(this.form.board_id, 'RUN_AVMT.txt' );
+                if (response.data.node.status == 'IN') { 
+                    if( this.config.isSendAjax ){
+                        this.sendAjax(this.responseData)    
+                    }
+
+                    if(this.config.isGenerateFile){
+                        this.generateFile();
+                    }
+
+                    // this code below is work because when view is return, it is throw error with message view
+                    // tambah counter jumlahJoin
+                    if(this.isJoin){
+                        // this.jumlahJoin = response.node.
+                        this.jumlahJoin++;
+                        if(this.jumlahJoin >= this.config.jumlahJoin){
+                            console.log('jumlahJoin tercapai')
+                            this.isJoin = false; //tutup join otomatis
+                            this.jumlahJoin=0; //back to default
+                        }
+                    }
                 }
 
-                if( this.config.isSendAjax ){
-                    if (response.data.node.status == 'IN') { 
-                        //kalau dia bkn in, gausah download;
-                        this.sendAjax()    
-                    }
+                if(message.includes('IN')){
+                    this.changesColor('yellow')
+                }else {
+                    this.changesColor('green')
+                }
+
+                if(message.includes('NG')){
+                    this.changesColor('red')
                 }
                 // this.toggleAlert('Success', message );
                 // this.showAlert = true;
-                this.form.board_id = '';
+                this.clearForm();
+                this.boardOnFocus();
+                this.isNG = false; //turn off toggle mode
                 // set focus
+            },
+
+            clearForm(){
+                this.form.board_id = '';
+                if(this.config.isGenerateFile) {
+                    // kalau IN jangan dulu dihapus;
+                    if(!this.responseData.message.includes('IN')) this.serialAutolinezero = '';
+                }
+                /*kalau config showNgOption itu false, baru jalankan*/
+                if (!this.config.showNgoption) { this.isNG = false; }
+            },
+
+            generateFile(){
+                if ( (typeof this.serialAutolinezero == 'undefined') || this.serialAutolinezero == '' ) {
+                    this.serialAutolinezero = 'NA';
+                }
+
+                var enter = this.config.delimiter; //'';//'\r\n';
+                this.downloadContent = this.form.board_id + enter + this.serialAutolinezero ;
+                
+
+                let filename = this.config.generatedFileName;
+                this.download( this.downloadContent, filename );
             },
 
             deleteOnClick(){
                 let data = this.form;
+                console.log(data)
+                // return;
                 let self = this;
                 this.toggleLoading();
 
-                axios.delete('api/main', data )
+                axios.delete('api/main', {data : data } )
                     .then((response) => {
                         self.toggleLoading()
                         self.handleSucces(response)
@@ -372,13 +735,36 @@
             showDetailError(){
                 // show modal containing the error 
                 console.log(this.detailError )
-                let errors = this.detailError.errors
+                let errors;
+                if(this.detailError.errors){
+                    errors = this.detailError.errors
+                }else{
+                    errors = this.detailError
+                }
                 this.toggleModal('Information', errors )
             },
 
             returnJoin(errors){
-                this.errors = errors
-                this.showJoin = true;
+                /*this.errors = errors
+                this.showJoin = true;*/
+                this.isJoin = true;
+                this.form.guid = errors['guid'][0];
+                // update sisa join times on first scan parents
+                this.config.jumlahJoin = errors['join_times_left'][0];
+                this.clearForm();
+                this.boardOnFocus();
+            },
+
+
+            isJoinOnChange(){
+                if( this.isJoin == false ){
+                    delete this.form.guid //delete guid property from form;
+                    this.initLabel();
+                }else{
+                    this.label.id = 'BOARD / DUMMY TICKET';
+                }
+
+                this.boardOnFocus();
             },
 
             toggleModal(header = '', message = ''){
@@ -387,6 +773,13 @@
                 this.showModal = !this.showModal
                 // this.showConfirm = !this.showConfirm;
                 // this.isLoading = !this.isLoading;
+                if(this.showModal === false ){
+                    // set focus on board id;
+                    this.boardOnFocus();
+                }else{
+                    let el = document.querySelector(':focus');
+                    if(el){ el.blur() } //no field focus
+                }
             },
 
             toggleConfirm(){
@@ -402,6 +795,7 @@
             },
 
             toggleJoin(){
+                this.boardOnFocus();
                 this.showJoin = !this.showJoin
             },
 
@@ -422,10 +816,8 @@
             // triggered by child view
             changeConfig(serverModel){
                 this.form.modelname = serverModel;
-                let newConfig = {
-                    model: serverModel,
-                    ip : this.form.ip
-                }
+                let newConfig = this.config;
+                newConfig.model = serverModel;
 
                 localStorage.setItem('config', JSON.stringify(newConfig) );
                 // changes localstorage
@@ -433,7 +825,7 @@
             },
 
             initLabel(){
-                console.log(this.info, 'set label method')
+                // console.log(this.info, 'set label method')
                 if( this.info.lineprocess != undefined ){
                     if(this.info.lineprocess.column_settings != undefined){
                         let column_settings = this.info.lineprocess.column_settings;
@@ -451,11 +843,34 @@
                 }
             },
 
-            sendAjax(){
-                console.log(this.config, 'sendAjax methods triggered')
+            sendAjax(responseData){
+                let scanner_id = responseData.node.scanner.id;
+                let guid;
+                
+                if ( this.form.board_id != '' ) {
+                    /*pertama kali jalan*/
+                    console.log('tidak ')
+                    var board_id = this.form.board_id;
+                }else{
+                    /*pas mau resend data*/
+                    var board_id = this.oldForm.board_id;
+                }
+
+                if(responseData.node.guid_master != null ){
+                    guid = responseData.node.guid_master;
+                }else if (responseData.node.guid_ticket != null ){
+                    guid = responseData.node.guid_ticket;
+                }else {
+                    guid = 'noData';
+                }
+
+                // let value = board_id + '_' + guid + '_' + scanner_id ; //ini untuk nanti;
+                let value = board_id;
+                // console.log({responseData, value}, 'sendAjax methods triggered')
+                
                 axios.get(this.config.uri, {
                     params : {
-                        valscan : this.form.board_id
+                        valscan : value
                     }
                 }).then( (response) => {
                     console.log('Success', response )
@@ -477,7 +892,9 @@
                 }
               }).then((response) => {
                 console.log(response)
-                self.info = response.data.data;
+                var data = response.data.data;
+                self.info = data;
+                self.config.jumlahJoin = data.lineprocess.join_qty;
                 self.initLabel();
               })
               .catch((error)=> {
@@ -485,8 +902,28 @@
                 modal.header = 'ERROR';
                 console.log(error.response)
                 modal.message = error.response.data.message;
-                self.showModal = !self.showModal;
+                self.showModal = !self.showModal; 
+
               })
+            },
+
+            resendData(){
+                if( (this.config.isSendAjax) && ( this.responseData != null) ){
+                    this.sendAjax(this.responseData)
+                }
+
+                if(this.config.isGenerateFile){
+                    if ( (typeof this.serialAutolinezero == 'undefined') || this.serialAutolinezero == '' ) {
+                        this.serialAutolinezero = 'NA';
+                    }
+
+                    var enter = this.config.delimiter; //'';//'\r\n';
+                    this.downloadContent = this.oldForm.board_id + enter + this.serialAutolinezero ;
+                    
+
+                    let filename = this.config.generatedFileName;
+                    this.download( this.downloadContent, filename );
+                }
             },
 
             toggleHasError(hasError = ''){
@@ -510,5 +947,28 @@
     .black {
         border-color: #636B6F;
         border-width: 2px;
+        margin-top: 5px;
+        margin-bottom: 5px;
+    }
+
+    .txt-color {
+        color: #ffffff;
+    }
+
+    .bg-color {
+        background-color: #edf108;
+    }
+
+    h1, h2, h3, h4 {
+        margin-top: 5px;
+        margin-bottom: 5px;
+    }
+
+    .no-bottom-margin {
+        margin-bottom: auto;
+    }
+
+    .no-left-margin {
+        margin-left: 0px;
     }
 </style>

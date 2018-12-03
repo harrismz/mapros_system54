@@ -10,6 +10,8 @@ use Illuminate\Http\Request;
 use App\Sequence;
 use App\Api\V1\Traits\LoggerHelper;
 use GuzzleHttp\Client;
+use App\Mastermodel;
+use App\Api\V1\Helper\Node;
 
 class TestController extends Controller
 {	
@@ -26,11 +28,30 @@ class TestController extends Controller
 
 	// $action=null, $desc = null, $scannerId=null 
 	public function index(Request $request){
-		return $this->testGuzzle($request);
+		return 'hai';
 	}
 
 	public function testNode(){
 		return 'wawa';
+	}
+
+	public function store(Request $request){
+		$a = [1,2,3];
+		$val = 5;
+		$arraySearch = array_search($val, $a);
+
+		$node = new Node($request->all());
+		return [
+			// 'node' => $node,
+			'arraySearch' => $arraySearch,
+			'getLineprocessNg' => $node->getLineprocessNg(),
+			// 'isAfterNgProcess' => $node->isAfterNgProcess('1,2,3,4,5', 4, 1),
+			'isRepaired' => $node->isRepaired(),
+		];
+		// return $node->isSettingContainChildrenOf('ticket');
+		// return ($node->isExists()) ? 'true' : 'false' ;
+		// return ($node->hasChildren()) ? 'true' : 'false' ;
+
 	}
 
 	public function testGuzzle(Request $request){
