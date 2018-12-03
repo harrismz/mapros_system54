@@ -902,6 +902,16 @@ class Node implements ColumnSettingInterface, CriticalPartInterface, RepairableI
 				$model = $model->where('guid_master', null );
 			}
 
+			$rework	= $model->where('judge', 'REWORK')->exists();
+			$ok 	= $model->where('judge', 'OK')->exists();
+
+			if($rework == true && $ok == true){
+				$model = $model->where('judge', 'REWORK');
+			}
+			else if($rework == false && $ok == true){
+				$model = $model->where('judge', 'OK');
+			}
+			
 			$model = $model->delete();
 			return $model;
 		}
